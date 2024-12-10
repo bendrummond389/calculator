@@ -4,6 +4,17 @@
 type Operator = '+' | '-' | '*' | '/' | '^'
 
 /**
+ * A set of valid mathematical operators.
+ *
+ * This set includes the basic arithmetic operators ('+', '-', '*', '/')
+ * as well as the exponentiation operator ('^').
+ *
+ * It is used to efficiently verify whether a given token is a valid operator
+ * in mathematical expressions.
+ */
+const OPERATORS = new Set<Operator>(['+', '-', '*', '/', '^'])
+
+/**
  * A mapping of operators to their precedence levels.
  *
  * The precedence levels are based on standard mathematical conventions:
@@ -31,7 +42,7 @@ const precedence: Record<Operator, number> = {
  * @returns `true` if the token is an `Operator`, otherwise `false`.
  */
 const isOperator = (token: string): token is Operator => {
-    return ['+', '-', '*', '/', '^'].includes(token)
+    return OPERATORS.has(token as Operator)
 }
 
 /**
@@ -41,7 +52,7 @@ const isOperator = (token: string): token is Operator => {
  * @returns `true` if the token is a number, otherwise `false`.
  */
 const isNumber = (token: string): boolean => {
-    return !isNaN(parseFloat(token))
+    return !isNaN(parseFloat(token)) && isFinite(parseFloat(token))
 }
 
 /**
@@ -77,12 +88,21 @@ const shuntingYard = (tokens: string[]): string[] => {
             ) {
                 output.push(operators.pop()!)
             }
+            if (operators.length === 0) {
+                throw new Error('Mismatched parentheses.')
+            }
             operators.pop()
+        } else {
+            throw new Error(`Invalid token: ${token}`)
         }
     }
 
     while (operators.length > 0) {
-        output.push(operators.pop()!)
+        const op = operators.pop()!
+        if (op === '(' || op === ')') {
+            throw new Error('Mismatched parentheses.')
+        }
+        output.push(op)
     }
 
     return output
@@ -126,11 +146,13 @@ const evaluateRPN = (tokens: string[]): number => {
                     stack.push(a ** b)
                     break
             }
+        } else {
+            throw new Error(`Invalid token in RPN: ${token}`)
         }
     }
 
     if (stack.length !== 1) {
-        throw new Error('Invalid RPN expression: unexpected state.')
+        throw new Error('Invalid RPN expression: unexpected stack state.')
     }
 
     return stack[0]
@@ -148,17 +170,25 @@ const tokenize = (expression: string): string[] => {
 }
 
 const main = (): void => {
-    const expression = '-3 + 5 * (2 - 8)'
-    console.log('Expression:', expression)
+    try {
+        const expression = '-3 + 5 * (2 - 8)'
+        console.log('Expression:', expression)
 
-    const tokens = tokenize(expression)
-    console.log('Tokens:', tokens)
+        const tokens = tokenize(expression)
+        console.log('Tokens:', tokens)
 
-    const refactor = shuntingYard(tokens)
-    console.log('RPN:', refactor)
+        const refactor = shuntingYard(tokens)
+        console.log('RPN:', refactor)
 
-    const output = evaluateRPN(refactor)
-    console.log('Output:', output)
+        const output = evaluateRPN(refactor)
+        console.log('Output:', output)
+    } catch (error) {
+        if (error instanceof Error) {
+            console.error('An error occurred:', error.message)
+        } else {
+            console.error('An unknown error occurred:', error)
+        }
+    }
 }
 
 main()
