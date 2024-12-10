@@ -5,6 +5,16 @@ type Operator = '+' | '-' | '*' | '/' | '^'
 
 /**
  * A mapping of operators to their precedence levels.
+ *
+ * The precedence levels are based on standard mathematical conventions:
+ * - '+' and '-' have the lowest precedence (level 1).
+ * - '*' and '/' have a higher precedence (level 2).
+ * - '^' (exponentiation) has the highest precedence (level 3).
+ *
+ * This means that in an expression, operators with higher precedence
+ * will be evaluated before operators with lower precedence. For example,
+ * in the expression "3 + 5 * 2", the multiplication will be performed
+ * before the addition, resulting in "3 + (5 * 2)".
  */
 const precedence: Record<Operator, number> = {
     '+': 1,
@@ -93,6 +103,9 @@ const evaluateRPN = (tokens: string[]): number => {
         if (isNumber(token)) {
             stack.push(parseFloat(token))
         } else if (isOperator(token)) {
+            if (stack.length < 2) {
+                throw new Error('Invalid RPN expression: not enough operands.')
+            }
             const b = stack.pop()!
             const a = stack.pop()!
             switch (token) {
@@ -106,6 +119,7 @@ const evaluateRPN = (tokens: string[]): number => {
                     stack.push(a * b)
                     break
                 case '/':
+                    if (b === 0) throw new Error('Division by zero.')
                     stack.push(a / b)
                     break
                 case '^':
@@ -113,6 +127,10 @@ const evaluateRPN = (tokens: string[]): number => {
                     break
             }
         }
+    }
+
+    if (stack.length !== 1) {
+        throw new Error('Invalid RPN expression: unexpected state.')
     }
 
     return stack[0]
@@ -125,12 +143,12 @@ const evaluateRPN = (tokens: string[]): number => {
  * @returns An array of tokens extracted from the expression.
  */
 const tokenize = (expression: string): string[] => {
-    const regex = /\d+(\.\d+)?|[+\-*/^()]|\s+/g
+    const regex = /-?\d+(\.\d+)?|[+\-*/^()]|\s+/g
     return expression.match(regex)?.filter((token) => token.trim() !== '') || []
 }
 
 const main = (): void => {
-    const expression = '3 + 5 * (2 - 8)'
+    const expression = '-3 + 5 * (2 - 8)'
     console.log('Expression:', expression)
 
     const tokens = tokenize(expression)
